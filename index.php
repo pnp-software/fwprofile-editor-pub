@@ -143,6 +143,8 @@ html, body, td, pre { -webkit-touch-callout: none; -webkit-user-select: none; -k
    color: black;
 }
 
+.labelAP { display: inline; font-size: 11px; position: relative; top: 2px;}
+
 .thumbnail { width: 400px; }
 .thumbnail img {  border: 1px solid #fff; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px; width: 400px; }
 .previewcontainer {  margin-right: 450px; }
@@ -313,7 +315,7 @@ div,p { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
 
      <div id=epropEntry>
        <span id=entryActionLabel>Entry Action:</span><span class=qmarkR id=entryacqmark><img src=img/qmark.png></span><br>
-       <div><input type=checkbox id=epropEntryAp> Adaptation Point</br></div>
+       <div><input type=checkbox id=epropEntryAp><label class=labelAP for=epropEntryAp> Adaptation Point</label></br></div>
        <select class="input-small" style='width: 120px;' id=epropEntryType><option>call function<option>define function<option>run code</select><input type=text class="input-small" style='width: 138px;' id=epropEntryFunc placeholder="function name" data-filter="funcname" data-suggest="action"><br>
        <div class=hidden><textarea rows=2 class='input-xlarge' id=epropEntryCode placeholder="# code to be executed, e.g.: var++;"></textarea></div>
        <div><textarea rows=2 class='input-xlarge' id=epropEntryDesc placeholder="action description"></textarea></div>
@@ -321,7 +323,7 @@ div,p { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
 
      <div id=epropDo class=hidden>
         Do Action:<span class=qmarkR id=doacqmark><img src=img/qmark.png></span><br>
-        <div><input type=checkbox id=epropDoAp> Adaptation Point</br></div>
+        <div><input type=checkbox id=epropDoAp><label class=labelAP for=epropDoAp> Adaptation Point</label></br></div>
         <select class="input-small" style='width: 120px;' id=epropDoType><option>call function<option>define function<option>run code</select><input type=text class="input-small" style='width: 138px;' id=epropDoFunc placeholder="function name" data-filter="funcname" data-suggest="action"><br>
         <div class=hidden><textarea rows=2 class='input-xlarge' id=epropDoCode placeholder="# code to be executed, e.g.: var++;"></textarea></div>
         <div><textarea rows=2 class='input-xlarge' id=epropDoDesc placeholder="action description"></textarea></div>
@@ -329,7 +331,7 @@ div,p { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
 
      <div id=epropExit class=hidden>
         Exit Action:<span class=qmarkR id=exitacqmark><img src=img/qmark.png></span><br>
-        <div><input type=checkbox id=epropExitAp> Adaptation Point</br></div>
+        <div><input type=checkbox id=epropExitAp><label class=labelAP for=epropExitAp> Adaptation Point</label></br></div>
         <select class="input-small" style='width: 120px;' id=epropExitType><option>call function<option>define function<option>run code</select><input type=text class="input-small" style='width: 138px;' id=epropExitFunc placeholder="function name" data-filter="funcname" data-suggest="action"><br>
         <div class=hidden><textarea rows=2 class='input-xlarge' id=epropExitCode placeholder="# code to be executed, e.g.: var++;"></textarea></div>
         <div><textarea rows=2 class='input-xlarge' id=epropExitDesc placeholder="action description"></textarea></div>
@@ -394,7 +396,7 @@ div,p { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
         <tr><td>Guard:<span class=qmarkR id=guardqmark style='margin-right: 5px;'><img src=img/qmark.png></span></td></tr>
         <tr id=epropTrGuard><td>
         <div>
-              <div><input type=checkbox id=epropTrGuardAp> Adaptation Point</br></div>
+              <div><input type=checkbox id=epropTrGuardAp><label class=labelAP for=epropTrGuardAp> Adaptation Point</label></br></div>
               <select class="input-small" style='width: 120px;' id=epropTrGuardType><option>call function<option>define function<option>run code<option disabled=true>--------------------<option>Else<option>Wait N cycles</select><input type=text id=epropTrGuardFunc class="input-small" style='width: 138px;' data-filter="funcname" data-suggest="guard" placeholder="function name">
               <div class=hidden><textarea rows=2 class='input-xlarge' id=epropTrGuardCode placeholder="# return evaluation, e.g.: return val &gt; 10;"></textarea><br></div>
               <div><textarea rows=2 class='input-xlarge' id=epropTrGuardDesc placeholder="guard description"></textarea></div>
@@ -408,7 +410,7 @@ div,p { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
 
      <div id=epropTrAction>
         Action:<span class=qmarkR id=tractionqmark style='margin-right: 5px;'><img src=img/qmark.png></span><br>
-        <div><input type=checkbox id=epropTrActionAp> Adaptation Point</br></div>
+        <div><input type=checkbox id=epropTrActionAp><label class=labelAP for=epropTrActionAp> Adaptation Point</label></br></div>
         <select class="input-small" style='width: 120px;' id=epropTrActionType><option>call function<option>define function<option>run code</select><input type=text class="input-small" id=epropTrActionFunc style='width: 138px;' placeholder="function name" data-filter="funcname" data-suggest="action">
         <div class=hidden><textarea rows=2 class='input-xlarge' id=epropTrActionCode placeholder="# code to be executed, e.g.: var++;"></textarea></div>
         <div><textarea rows=2 class='input-xlarge' id=epropTrActionDesc placeholder="action description"></textarea></div>

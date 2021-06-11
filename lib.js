@@ -697,13 +697,13 @@
       if (stateIsNote(conn.stateFrom)) return;
 
       stereotypeAp = svgDoubleLt()+"AP"+svgDoubleGt()+" ";
-      sStereotypeApGuard = conn.fwprop.guardAp?stereotypeAp:svgEmptyChar();
-      sStereotypeApAction = conn.fwprop.actionAp?stereotypeAp:svgEmptyChar();      
+      sStereotypeApGuard = conn.fwprop.guardAp?stereotypeAp:"";
+      sStereotypeApAction = conn.fwprop.actionAp?stereotypeAp:"";
 
       var text= (conn.fwprop.identifier!='' ? conn.fwprop.identifier : "") +
                 ( (conn.fwprop.guardFunc && conn.fwprop.guardFunc!='')
                   || (conn.fwprop.guardCode && conn.fwprop.guardCode!='')
-                  || (conn.fwprop.guardDesc && conn.fwprop.guardDesc!='') ? " ["+sStereotypeApGuard+svgNewlines(displayInfoText(conn.fwprop.guardFunc?conn.fwprop.guardFunc:conn.fwprop.guardCode,conn.fwprop.guardDesc))+"] " : "");
+                  || (conn.fwprop.guardDesc && conn.fwprop.guardDesc!='') ? " [ "+sStereotypeApGuard+svgNewlines(displayInfoText(conn.fwprop.guardFunc?conn.fwprop.guardFunc:conn.fwprop.guardCode,conn.fwprop.guardDesc))+" ] " : "");
 
           text = text + ( (conn.fwprop.actionFunc && conn.fwprop.actionFunc!='')
                           || (conn.fwprop.actionCode && conn.fwprop.actionCode!='')
