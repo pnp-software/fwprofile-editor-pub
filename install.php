@@ -19,7 +19,7 @@
    PRIMARY KEY (id),
    KEY name (name,userID),
    KEY userID (userID)
-   ) ENGINE=MyISAM ");
+   ) ");
 
    $result=execQuery("CREATE TABLE IF NOT EXISTS sessions (
    id char(32) NOT NULL,
@@ -31,7 +31,7 @@
    KEY lastUpdate (lastUpdate),
    KEY userID (userID),
    KEY userIP (userIP)
-   ) ENGINE=MyISAM");
+   ) ");
 
 
    $result=execQuery("CREATE TABLE IF NOT EXISTS users (
@@ -45,7 +45,7 @@
    idMap MEDIUMTEXT NOT NULL,
    PRIMARY KEY (id),
    UNIQUE KEY email (email)
-   ) ENGINE=MyISAM");
+   ) ");
 
    $result=execQuery("CREATE TABLE IF NOT EXISTS shares (
    id int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -54,7 +54,7 @@
    perm enum('ro','rw') NOT NULL,
    PRIMARY KEY (id),
    KEY diagramID (diagramID)
-   ) ENGINE = MYISAM");
+   ) ");
 
    $result=execQuery("CREATE TABLE IF NOT EXISTS history (
    id int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -70,7 +70,7 @@
    height int(10) unsigned NOT NULL,
    PRIMARY KEY (id),
    KEY diagramID (diagramID)
-   ) ENGINE = MYISAM");
+   ) ");
 
    echo "Done. MySQL installation successful.<br>";
 
