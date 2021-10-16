@@ -32,7 +32,6 @@ function importFileRun()
    restoreFromExportString(g.import,true);
    modalDestroy();
    $('#importfile').val('');
-   $('#importfile').replaceWith($('#importfile').clone())
    $('#importfile').change(function(){importFileSelected();});
    $('#importfilename').html('');
    $('#importbutton').hide();
