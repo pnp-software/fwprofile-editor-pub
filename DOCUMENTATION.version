@@ -1,3 +1,13 @@
+5.29
+
+* Updated DOCUMENTATION.version and version.hp file to reflect the
+* change made in the previous versio (fix for json file import)
+
+5.28
+
+* Added fix for json import. Version 5.28 was created in GitHub but we 
+* forgot to update the DOCUMENTATION.version and version.hp file)
+
 5.27
 
 * Added indentation in notes
