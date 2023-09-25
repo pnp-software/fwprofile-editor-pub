@@ -55,6 +55,7 @@ def get_pr_desc(json_obj):
             is_do_nothing = (description.lower().strip() == 'do nothing')
             states[key] = {
                 'id': item_id,
+                'name': key,
                 'type': item_type,
                 'x': item['attrs']['x'],
                 'y': item['attrs']['y'],
@@ -85,7 +86,7 @@ def get_pr_desc(json_obj):
             'to': connection['stateToID'],
             'guardDesc': connection['fwprop'].get('guardDesc', ''),
             'order': int(connection['fwprop']['order']),
-            'isElseGuard': is_else_guard
+            'is_else_guard': is_else_guard
         }
         connections.append(conn_data)
         

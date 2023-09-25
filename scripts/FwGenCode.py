@@ -62,6 +62,7 @@ def pr_Create_user_header(pr_desc, dir_path):
         the node actions and the guards.
     """
     s = ''
+    i = 0
     for state_name,state in pr_desc['states'].items():
         i = i+1
         if state['type'] == 'state' and not state['is_do_nothing']:
@@ -69,10 +70,20 @@ def pr_Create_user_header(pr_desc, dir_path):
             for note in state['to_notes']:
                 notes.append([''])
                 notes.append(note['description']
-            s += writeDoxy(['Function implementing the action for node '+state_name,
-                            state.description] + notes
+            s += writeDoxy(['Function implementing the action for node '+state_name, \
+                            state.description] + notes)
             s += 'void '+pr_name+state_name+'();\n\n'
 
+    i = 0
+    for connection in pr_desc['connections']:
+        i = i+1
+        if (connection['guardDesc'] != '') and not connection['is_else_guard']:
+            src_name = connection['from']['name']
+            dest_name = connection['to']['name']
+            connection_name = pr_name + src_name + 'To' + dest_name
+            s += writeDoxy(['Function implementing the guard from '+src_name+' to '+dest_name, \
+                            connection['guardDesc'])
+            s += 'void '+pr_name+connection_name+'();\n\n'
 
     short_desc = 'Header file for user functions for procedure '+pr_name
     createHeaderFile(dir_path, pr_name+'.h', s, short_desc)
