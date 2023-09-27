@@ -31,7 +31,7 @@ def get_pr_desc(json_obj):
         item_type = item['fwprop']['type']
         item_name = item['fwprop'].get('identifier', None)
         if item_type in ('init', 'final'):  # final or final pseuod-node
-            item_name = item_type
+            item_name = item_type.capitalize()
         
         if item_type == "note":
             notes.append({
