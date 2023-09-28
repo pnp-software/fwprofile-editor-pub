@@ -15,9 +15,6 @@ import copy
 import zipfile
 import datetime;
 
-from Format import pattern_edit, markdown_to_doxygen
-
-
 """ Maximum length of a line in doxygen comment """
 MAX_LINE_LENGTH = 80
 

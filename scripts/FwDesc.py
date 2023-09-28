@@ -9,9 +9,6 @@ __author__ = 'Alessandro Pasetti, P&P software GmbH'
 
 import json
 
-# Regular expression for a wait time expressed as an integer number of cycles
-reWaitCycles = re.compile("([Ww]ait\s)([A-Za-z0-9_]+)(\s[Cc]ycle)(s*)")
-
 def get_pr_desc(json_obj):
     """ 
     Return a dictionary describing the procedure in the argument josn object
@@ -22,10 +19,13 @@ def get_pr_desc(json_obj):
         return None
     pr_name = globals_data.get('smName', 'Unnamed Procedure')
     
-    # Extract states, notes, and notedots
-    states = {}
-    notes = []
-    notedots = {}
+    states = {}                 # Dictionary of states indexed by their name
+    notes = []                  # List of notes
+    notedots = {}               # Dictionary of notedots indexed by ID
+    states_by_id = {}           # Dictionary of states indexed by their ID
+    notes_by_id = {}            # Dictionary of notes indexed by their ID
+    states_by_notedot_id = {}   # Dictionary of states indexed by the ID of the notedot attached to them
+    
     for item in json_obj.get('states', []):
         item_id = item['id']
         item_type = item['fwprop']['type']
@@ -34,17 +34,20 @@ def get_pr_desc(json_obj):
             item_name = item_type.capitalize()
         
         if item_type == "note":
-            notes.append({
+            note = {
                 'id': item_id,
                 'x': item['attrs']['x'],
                 'y': item['attrs']['y'],
                 'width': item['attrs']['width'],
                 'height': item['attrs']['height'],
                 'description': item['fwprop'].get('note', ''),
-                'to_states': []  # List to hold states to which the note is attached
-            })
+                'to_states': []  # List of states to which the note is attached
+            }
+            notes.append(note)
+            notes_by_id[item_id] = note
         elif item_type == "notedot":
             notedots[item_id] = {
+                'id': item_id,
                 'x': item['attrs']['x'],
                 'y': item['attrs']['y']
             }
@@ -63,8 +66,8 @@ def get_pr_desc(json_obj):
                 'height': item['attrs']['height'],
                 'description': description,
                 'is_do_nothing': is_do_nothing,
-                'outgoing_connections': [],  # List to hold outgoing connections
-                'to_notes': []  # List to hold notes attached to the state
+                'outgoing_connections': [],  # List of outgoing connections
+                'to_notes': []  # List of notes attached to the state
             }
             states_by_id[item_id] = key
     
@@ -75,17 +78,15 @@ def get_pr_desc(json_obj):
                 notedot['x'] < state['x'] + state['width'] and
                 notedot['y'] > state['y'] and 
                 notedot['y'] < state['y'] + state['height']):
-                state['to_notes'].append(notedot_id)
+                states_by_notedot_id[notedot['id']] = state
     
     # Extract connections
     connections = []
     for connection in json_obj.get('connections', []):
         is_else_guard = (connection['fwprop']['guardCode'].lower().strip() == 'else')
-        from_state_key = states_by_id[connection['stateFromID']]
-        to_state_key = states_by_id[connection['stateToID']]
         conn_data = {
-            'from': states[from_state_key],
-            'to': states[to_state_key],
+            'from': connection['stateFromID'],
+            'to': connection['stateToID'],
             'guardDesc': connection['fwprop'].get('guardDesc', ''),
             'order': int(connection['fwprop']['order']),
             'is_else_guard': is_else_guard
@@ -97,10 +98,14 @@ def get_pr_desc(json_obj):
             if state['id'] == conn_data['from']:
                 state['outgoing_connections'].append(conn_data)
         
-        # Check if the connection is between a note and a notedot and update the note's 'to_states'
+        # Check if the connection is between a note and a notedot attached to a state
         for note in notes:
             if note['id'] == conn_data['from'] and conn_data['to'] in notedots:
-                note['to_states'].append(conn_data['to'])
+                notedot = notedots[conn_data['to']]
+                if notedot['id'] in states_by_notedot_id:
+                    target_state = states_by_notedot_id[notedot['id']]
+                    target_state['to_notes'].append(note)
+                    note['to_states'].append(target_state)
     
     # Create the refined dictionary
     desc = {
@@ -115,7 +120,7 @@ def get_pr_desc(json_obj):
 
 
 def main(argv):
-    """ Dummy main to be used to test functions defined in module """.
+    """ Dummy main to be used to test functions defined in module """
     json_file_name = argv[0]
     with open(json_file_name) as fd:
         json_obj = json.load(fd)

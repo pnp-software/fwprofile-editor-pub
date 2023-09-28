@@ -7,8 +7,9 @@ file built by the FW Profile Editor.
 __author__ = 'Alessandro Pasetti, P&P software GmbH'
 
 import json
+import sys
 
-from Utilities import createHeaderFile, getSpecItemName, writeDoxy
+from Utilities import createHeaderFile, createBodyFile, writeDoxy
 from FwDesc import get_pr_desc
 
 """ Key is the name of a node and the value is the node's numerical identifier """
@@ -70,10 +71,10 @@ def pr_create_header(pr_desc, dir_path):
     s += writeDoxy(['Get the current node of the procedure '+pr_name,
                    '@return -1 if the procedure is stopped; otherwise the current node'])
     s += 'int FwPr'+pr_name+'GetCurNode();\n\n'
-    s += writeDoxy(['Get the procedure execution coounter for procedure '+pr_name,
+    s += writeDoxy(['Get the procedure execution coounter for procedure '+pr_name, \
                    '@return the execution counter of the procedure'])
     s += 'unsigned int FwPr'+pr_name+'GetPrExecCnt();\n\n'
-    s += writeDoxy(['Get the node execution counter for procedure '+pr_name]),
+    s += writeDoxy(['Get the node execution counter for procedure '+pr_name, \
                    '@return the execution counter of the procedure'])
     s += 'unsigned int FwPr'+pr_name+'GetNodeExecCnt();\n\n'
     
@@ -81,7 +82,7 @@ def pr_create_header(pr_desc, dir_path):
     createHeaderFile(dir_path, 'FwPr'+pr_name+'.h', s, short_desc)
     
     
-def pr_Create_user_header(pr_desc, dir_path):
+def pr_create_user_header(pr_desc, dir_path):
     """ Create the header file which declares the functions implementing
         the node actions and the guards.
     """
@@ -93,9 +94,9 @@ def pr_Create_user_header(pr_desc, dir_path):
             notes = []
             for note in state['to_notes']:
                 notes.append([''])
-                notes.append(note['description']
+                notes.append(note['description'])
             s += writeDoxy(['Function implementing the action for node '+state_name, \
-                            state.description] + notes)
+                            state['description']] + notes)
             s += 'void FwPr'+pr_name+state_name+'();\n\n'
 
     i = 0
@@ -106,7 +107,7 @@ def pr_Create_user_header(pr_desc, dir_path):
             dest_name = connection['to']['name']
             connection_name = pr_name + src_name + 'To' + dest_name
             s += writeDoxy(['Function implementing the guard from '+src_name+' to '+dest_name, \
-                            connection['guardDesc'])
+                            connection['guardDesc']])
             s += 'void FwPr'+pr_name+connection_name+'();\n\n'
 
     short_desc = 'Header file for user functions for procedure '+pr_name
@@ -166,7 +167,7 @@ def pr_create_body(pr_desc, dir_path):
     s += '  nodeExecCnt++;\n'
     s += '  while (1) {\n'
     for state in pr_desc['states']:
-        assert(len(state['outgoing_connections'] == 1)
+        assert(len(state['outgoing_connections']) == 1)
         s += '    if (curNode == '+get_node_name(pr_name,state)+')\n' 
         guard_fnc = get_guard_fnc(pr_name,state['outgoing_connections'][0])
         s += '      if ('+guard_fnc+'() == 0)\n'
@@ -202,11 +203,13 @@ def pr_create_body(pr_desc, dir_path):
 
 
 def main(argv):
-    """ Dummy main to be used to test functions defined in module """.
+    """ Dummy main to be used to test functions defined in module """
     jsonFileName = argv[0]
+    dir_path = argv[1]
     with open(jsonFileName) as fd:
         json_obj = json.load(fd)
-        prDesc = get_pr_desc(json_obj)
+        pr_desc = get_pr_desc(json_obj)
+        pr_create_user_header(pr_desc, dir_path)
     return
 
 if __name__ == "__main__":
