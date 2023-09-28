@@ -81,9 +81,11 @@ def get_pr_desc(json_obj):
     connections = []
     for connection in json_obj.get('connections', []):
         is_else_guard = (connection['fwprop']['guardCode'].lower().strip() == 'else')
+        from_state_key = states_by_id[connection['stateFromID']]
+        to_state_key = states_by_id[connection['stateToID']]
         conn_data = {
-            'from': connection['stateFromID'],
-            'to': connection['stateToID'],
+            'from': states[from_state_key],
+            'to': states[to_state_key],
             'guardDesc': connection['fwprop'].get('guardDesc', ''),
             'order': int(connection['fwprop']['order']),
             'is_else_guard': is_else_guard

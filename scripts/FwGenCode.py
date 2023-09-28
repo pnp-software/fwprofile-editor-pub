@@ -9,9 +9,28 @@ __author__ = 'Alessandro Pasetti, P&P software GmbH'
 import json
 
 from Utilities import createHeaderFile, getSpecItemName, writeDoxy
+from FwDesc import get_pr_desc
 
 """ Key is the name of a node and the value is the node's numerical identifier """
 node_Num_ids = {}
+
+
+def get_guard_fnc(pr_name, connection):
+    """ Return the name of the function implementing the guard on the connection """
+    from_state = connection['from']
+    to_state = connection['to']
+    return 'FwPr'+pr_name+from_state+to_state
+    
+    
+def get_node_name(pr_name, state):
+    """ Return the name of the enumerator holding the name of a node """
+    return 'FwPr'+pr_name+state['name']
+
+    
+def get_node_fnc(pr_name, state):
+    """ Return the name of the function implementing the action of the state's node """
+    return 'FwPr'+pr_name+'Do'+state['name']
+
 
 def pr_create_header(pr_desc, dir_path):
     """ Create the header file for the procedure module.
@@ -99,7 +118,7 @@ def pr_create_body(pr_desc, dir_path):
         The first argument is the descriptor of the procedure returned
         by function get_pr_desc. The second argument is the fully qualified
         name of the directory where the file is generated.
-    """
+    """        
     pr_name = pr_desc['pr_name']
     
     s = '#include <'+pr_name+'.h>\n\n'
@@ -145,20 +164,49 @@ def pr_create_body(pr_desc, dir_path):
     s += '      return;\n'
     s += '  prExecCnt++;\n'
     s += '  nodeExecCnt++;\n'
-    
-    
-
+    s += '  while (1) {\n'
+    for state in pr_desc['states']:
+        assert(len(state['outgoing_connections'] == 1)
+        s += '    if (curNode == '+get_node_name(pr_name,state)+')\n' 
+        guard_fnc = get_guard_fnc(pr_name,state['outgoing_connections'][0])
+        s += '      if ('+guard_fnc+'() == 0)\n'
+        s += '        break;\n'
+        next_node = state['outgoing_connections'][0]
+        if next_node['name'] == 'Final':
+            s += '    curNode = FwPr'+prName+'Stopped;\n'
+            s += '    break;\n'
+        if len(next_node['outgoing_connections'] == 1):
+            s += '    curNode = ' + get_node_name(pr_name,next_node) + ';\n'
+            s += '    nodeExecCnt++;\n'
+            s += '   '+get_node_fnc+'();\n'
+        else:
+            while (len(next_node['outgoing_connections']) > 1):
+                for connection in next_node['outgoing_connections']:
+                    guard_fnc = get_guard_fnc(pr_name,connection)
+                    next_node = connection['to']
+                    if len(next_node['outgoing_connections']) == 1:
+                        if next_node['name'] == 'Final':
+                            s += '    curNode = FwPr'+prName+'Stopped;\n'
+                            s += '    return;\n'
+                        else:
+                            s += '      if ('+guard_fnc+'() == 1) {\n'
+                            s += '         curNode = '+get_node_name(pr_name,next_node)+';\n'
+                            s += '         nodeExecCnt++;\n'
+                            s += '        '+get_node_fnc+'();\n'
+                            s += '       }\n'
+    s += '  }\n'    # While (1)    
     s += '}\n\n'    
     
+    short_desc = 'Body file for module implementing procedure '+pr_name
+    createHeaderFile(dir_path, 'FwPr'+pr_name+'.c', s, short_desc)
 
 
 def main(argv):
     """ Dummy main to be used to test functions defined in module """.
     jsonFileName = argv[0]
     with open(jsonFileName) as fd:
-        jsonObj = json.load(fd)
-        prDesc = getPrDesc(jsonFileName, jsonObj)
-        import pdb; pdb.set_trace()         
+        json_obj = json.load(fd)
+        prDesc = get_pr_desc(json_obj)
     return
 
 if __name__ == "__main__":
