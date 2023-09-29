@@ -10,76 +10,85 @@ import json
 import sys
 
 from Utilities import createHeaderFile, createBodyFile, writeDoxy
-from FwDesc import get_pr_desc
+from FwDesc import get_pr_desc, states_by_id
 
-""" Key is the name of a node and the value is the node's numerical identifier """
-node_Num_ids = {}
+""" Prefix for file names for files implementing procedures """
+fn_pr_prefix = 'FwPr'
+""" Suffix for the header file name declaring the procedure user functions """
+uh_pr_suffix = 'User'
+""" Prefix for enumerator holding procedure nodes """
+enum_pr_prefix = 'FwPr'
+""" Prefix for function names for procedure files """
+fnc_pr_prefix = 'FwPr'
 
 
 def get_guard_fnc(pr_name, connection):
     """ Return the name of the function implementing the guard on the connection """
-    from_state = connection['from']
-    to_state = connection['to']
-    return 'FwPr'+pr_name+from_state+to_state
+    from_state = states_by_id[connection['from']]
+    to_state = states_by_id[connection['to']]
+    return fnc_pr_prefix+pr_name+from_state['name']+to_state['name']
     
     
 def get_node_name(pr_name, state):
     """ Return the name of the enumerator holding the name of a node """
-    return 'FwPr'+pr_name+state['name']
+    return fnc_pr_prefix+pr_name+state['name']
 
     
 def get_node_fnc(pr_name, state):
     """ Return the name of the function implementing the action of the state's node """
-    return 'FwPr'+pr_name+'Do'+state['name']
+    return fnc_pr_prefix+pr_name+state['name']
 
 
 def pr_create_header(pr_desc, dir_path):
     """ Create the header file for the procedure module.
         The header file declares the functions to start, stop and execute
-        the procedure and the functions to get the current node, the
-        two procedure counters, and the enumerated type holding the node
+        the procedure; the functions to get the current node, the
+        two procedure counters; and the enumerated type holding the node
         identifiers.
         The first argument is the descriptor of the procedure returned
         by function get_pr_desc. The second argument is the fully qualified
         name of the directory where the file is generated.
     """
-    pr_name = pr_desc['pr_name']
+    pr_name = pr_desc['name']
     
     # Define the enumerated type holding the node identifiers
     s = ''
     i = 0
-    writeDoxy(['Enumerated type for the procedure nodes'])
+    s += writeDoxy(['Enumerated type for the procedure nodes'])
     s += 'typedef enum {\n'
-    s += '  /** Identifier for stopped state */\n'
-    s += '  FwPr'+pr_name+'Stopped'+' = 0;\n'
+    s += '  '+enum_pr_prefix+pr_name+'Stopped'+' = 0;\n'
     for state_name,state in pr_desc['states'].items():
-        i = i+1
         if state['type'] == 'state':
-            s += '  /** Identifier for node '+state_name+'*/'
-            s += '  FwPr'+pr_name+state_name+' = '+str(i)+';\n'
-    s+= '} FwPr'+pr_name+'Nodes_t;\n\n'
+            i = i+1
+            s += '  '+enum_pr_prefix+pr_name+state_name+' = '+str(i)+';\n'
+    s+= '} '+enum_pr_prefix+pr_name+'Nodes_t;\n\n'
   
     s += writeDoxy(['Function to start procedure '+pr_name])
-    s += 'void FwPr'+pr_name+'Start();\n\n'
+    s += 'void '+fnc_pr_prefix+pr_name+'Start();\n\n'
     s += writeDoxy(['Function to stop procedure '+pr_name])
-    s += 'void FwPr'+pr_name+'Stop();\n\n'
+    s += 'void '+fnc_pr_prefix+pr_name+'Stop();\n\n'
     s += writeDoxy(['Function to execute procedure '+pr_name])
-    s += 'void FwPr'+pr_name+'Exec();\n\n'
+    s += 'void '+fnc_pr_prefix+pr_name+'Exec();\n\n'
     s += writeDoxy(['Check the current state of procedure '+pr_name,
                    '@return 0 if the procedure is not started; 1 otherwise'])
-    s += 'unsigned int FwPr'+pr_name+'IsStarted();\n\n'
+    s += 'unsigned int '+fnc_pr_prefix+pr_name+'IsStarted();\n\n'
     s += writeDoxy(['Get the current node of the procedure '+pr_name,
                    '@return -1 if the procedure is stopped; otherwise the current node'])
-    s += 'int FwPr'+pr_name+'GetCurNode();\n\n'
+    s += enum_pr_prefix+pr_name+'Nodes_t'+pr_name+'GetCurNode();\n\n'
     s += writeDoxy(['Get the procedure execution coounter for procedure '+pr_name, \
                    '@return the execution counter of the procedure'])
-    s += 'unsigned int FwPr'+pr_name+'GetPrExecCnt();\n\n'
+    s += 'unsigned int '+fnc_pr_prefix+pr_name+'GetPrExecCnt();\n\n'
     s += writeDoxy(['Get the node execution counter for procedure '+pr_name, \
                    '@return the execution counter of the procedure'])
-    s += 'unsigned int FwPr'+pr_name+'GetNodeExecCnt();\n\n'
+    s += 'unsigned int '+fnc_pr_prefix+pr_name+'GetNodeExecCnt();\n\n'
     
-    short_desc = 'Header file for module implementing procedure '+pr_name
-    createHeaderFile(dir_path, 'FwPr'+pr_name+'.h', s, short_desc)
+    func_desc = 'The functions declared in this file allow the user to  control ' + \
+                'the operation of the FW Profile procedure ' + pr_name + '.' + \
+                'The following operations can be performed on the procedure: ' + \
+                '(a) Start, stop and execute the procedure \n' + \
+                '(b) Query the procedure for its start/stop state and for its current node\n' + \
+                '(c) Get the current value of procedure and node execution counters '
+    createHeaderFile(dir_path, fn_pr_prefix+pr_name, s, func_desc)
     
     
 def pr_create_user_header(pr_desc, dir_path):
@@ -88,30 +97,34 @@ def pr_create_user_header(pr_desc, dir_path):
     """
     s = ''
     i = 0
+    pr_name = pr_desc['name']
     for state_name,state in pr_desc['states'].items():
         i = i+1
         if state['type'] == 'state' and not state['is_do_nothing']:
             notes = []
             for note in state['to_notes']:
-                notes.append([''])
+                notes.append('')
                 notes.append(note['description'])
             s += writeDoxy(['Function implementing the action for node '+state_name, \
                             state['description']] + notes)
-            s += 'void FwPr'+pr_name+state_name+'();\n\n'
+            s += 'void '+fnc_pr_prefix+pr_name+state_name+'();\n\n'
 
     i = 0
     for connection in pr_desc['connections']:
         i = i+1
         if (connection['guardDesc'] != '') and not connection['is_else_guard']:
-            src_name = connection['from']['name']
-            dest_name = connection['to']['name']
-            connection_name = pr_name + src_name + 'To' + dest_name
-            s += writeDoxy(['Function implementing the guard from '+src_name+' to '+dest_name, \
-                            connection['guardDesc']])
-            s += 'void FwPr'+pr_name+connection_name+'();\n\n'
+            src_state_name = pr_desc['states_by_id'][connection['from']]
+            dest_state_name = pr_desc['states_by_id'][connection['to']]
+            connection_name = pr_name + src_state_name + 'To' + dest_state_name
+            s += writeDoxy(['Function implementing the guard from '+src_state_name+\
+                            ' to '+dest_state_name, connection['guardDesc']])
+            s += 'void '+fnc_pr_prefix+pr_name+connection_name+'();\n\n'
 
-    short_desc = 'Header file for user functions for procedure '+pr_name
-    createHeaderFile(dir_path, 'FwPr'+pr_name+'.h', s, short_desc)
+    func_desc =  'The functions in this file implement the actions and ' + \
+                 'guards of the FW Profile procedure of ' + pr_name + '.' + \
+                 'The user is responsible for providing a C body file which ' + \
+                 'implements all the functions declared in this header file.' 
+    createHeaderFile(dir_path, fn_pr_prefix + pr_name + uh_pr_suffix, s, func_desc)
     
 
 def pr_create_body(pr_desc, dir_path):
@@ -120,61 +133,62 @@ def pr_create_body(pr_desc, dir_path):
         by function get_pr_desc. The second argument is the fully qualified
         name of the directory where the file is generated.
     """        
-    pr_name = pr_desc['pr_name']
+    pr_name = pr_desc['name']
     
     s = '#include <'+pr_name+'.h>\n\n'
     s += writeDoxy(['The current procedure node'])
-    s += 'static FwPr'+pr_name+'Nodes_t curNode = FwPr'+pr_name+'Stopped;\n'
+    s += 'static '+enum_pr_prefix+pr_name+'Nodes_t curNode = FwPr'+pr_name+'Stopped;\n'
     s += writeDoxy(['The procedure execution counter'])
     s += 'static unsigned int prExecCnt = 0;\n' 
     s += writeDoxy(['The node execution counter'])
     s += 'static unsigned int nodeExecCnt = 0;\n' 
     
-    s += 'unsigned int FwPr'+pr_name+'IsStarted() {\n'
-    s += '  return curNode != FwPr'+pr_name+'Stopped;\n'
+    s += 'unsigned int'+' '+fnc_pr_prefix+pr_name+'IsStarted() {\n'
+    s += '  return curNode != '+enum_pr_prefix+pr_name+'Stopped;\n'
     s += '}\n\n'
     
-    s += 'FwPr'+pr_name+'Nodes_t FwPr'+pr_name+'GetCurNode() {\n'
+    s += enum_pr_prefix+pr_name+'Nodes_t '+fnc_pr_prefix+pr_name+'GetCurNode() {\n'
     s += '  return curNode;\n'
     s += '}\n\n'
 
-    s += 'unsigned int FwPr'+pr_name+'GetPrExecCnt() {\n'
+    s += 'unsigned int '+fnc_pr_prefix+pr_name+'GetPrExecCnt() {\n'
     s += '  return prExecCnt;\n'
     s += '}\n\n'
 
-    s += 'unsigned int FwPr'+pr_name+'GetNodeExecCnt() {\n'
+    s += 'unsigned int '+fnc_pr_prefix+pr_name+'GetNodeExecCnt() {\n'
     s += '  return nodeExecCnt;\n'
     s += '}\n\n'
  
-    s += 'void FwPr'+pr_name+'Start() {\n'
-    s += '  if (curNode != FwPr'+pr_name+'Stopped)\n'
+    s += 'void '+fnc_pr_prefix+pr_name+'Start() {\n'
+    s += '  if (curNode != '+enum_pr_prefix+pr_name+'Stopped)\n'
     s += '      return;\n'
-    s += '  curNode = FwPr'+prName+'Initial;\n'
+    s += '  curNode = '+enum_pr_prefix+pr_name+'Initial;\n'
     s += '  prExecCnt = 0;\n'
     s += '  nodeExecCnt = 0;\n'
     s += '}\n\n'
 
-    s += 'void FwPr'+pr_name+'Stop() {\n'
-    s += '  if (curNode == FwPr'+pr_name+'Stopped)\n'
+    s += 'void '+fnc_pr_prefix+pr_name+'Stop() {\n'
+    s += '  if (curNode == '+enum_pr_prefix+pr_name+'Stopped)\n'
     s += '      return;\n'
-    s += '  curNode = FwPr'+prName+'Stopped;\n'
+    s += '  curNode = '+enum_pr_prefix+pr_name+'Stopped;\n'
     s += '}\n\n'
     
-    s += 'void FwPr'+pr_name+'Execute() {\n'
-    s += '  if (curNode == FwPr'+pr_name+'Stopped)\n'
+    s += 'void '+fnc_pr_prefix+pr_name+'Execute() {\n'
+    s += '  if (curNode == '+enum_pr_prefix+pr_name+'Stopped)\n'
     s += '      return;\n'
     s += '  prExecCnt++;\n'
     s += '  nodeExecCnt++;\n'
     s += '  while (1) {\n'
-    for state in pr_desc['states']:
+    for state_name,state in pr_desc['states'].items():
         assert(len(state['outgoing_connections']) == 1)
         s += '    if (curNode == '+get_node_name(pr_name,state)+')\n' 
         guard_fnc = get_guard_fnc(pr_name,state['outgoing_connections'][0])
-        s += '      if ('+guard_fnc+'() == 0)\n'
-        s += '        break;\n'
-        next_node = state['outgoing_connections'][0]
+        if guard_fnc != '':
+            s += '      if ('+guard_fnc+'() == 0)\n'
+            s += '        break;\n'
+        next_node = states_by_id[state['outgoing_connections'][0]['to']]
         if next_node['name'] == 'Final':
-            s += '    curNode = FwPr'+prName+'Stopped;\n'
+            s += '    curNode = '+enum_pr_prefix+prName+'Stopped;\n'
             s += '    break;\n'
         if len(next_node['outgoing_connections'] == 1):
             s += '    curNode = ' + get_node_name(pr_name,next_node) + ';\n'
@@ -187,7 +201,7 @@ def pr_create_body(pr_desc, dir_path):
                     next_node = connection['to']
                     if len(next_node['outgoing_connections']) == 1:
                         if next_node['name'] == 'Final':
-                            s += '    curNode = FwPr'+prName+'Stopped;\n'
+                            s += '    curNode = '+enum_pr_prefix+prName+'Stopped;\n'
                             s += '    return;\n'
                         else:
                             s += '      if ('+guard_fnc+'() == 1) {\n'
@@ -199,7 +213,7 @@ def pr_create_body(pr_desc, dir_path):
     s += '}\n\n'    
     
     short_desc = 'Body file for module implementing procedure '+pr_name
-    createHeaderFile(dir_path, 'FwPr'+pr_name+'.c', s, short_desc)
+    createHeaderFile(dir_path, fn_pr_prefix+pr_name+'.c', s, short_desc)
 
 
 def main(argv):
@@ -210,6 +224,8 @@ def main(argv):
         json_obj = json.load(fd)
         pr_desc = get_pr_desc(json_obj)
         pr_create_user_header(pr_desc, dir_path)
+        pr_create_header(pr_desc, dir_path)
+        pr_create_body(pr_desc, dir_path)
     return
 
 if __name__ == "__main__":

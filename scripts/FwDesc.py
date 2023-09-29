@@ -40,7 +40,7 @@ def get_pr_desc(json_obj):
                 'y': item['attrs']['y'],
                 'width': item['attrs']['width'],
                 'height': item['attrs']['height'],
-                'description': item['fwprop'].get('note', ''),
+                'description': item['fwprop'].get('note', '').replace('\n',' '),
                 'to_states': []  # List of states to which the note is attached
             }
             notes.append(note)
@@ -54,7 +54,7 @@ def get_pr_desc(json_obj):
         else:   # The state is one of: IPN, FPN, Action Node, or Decision Node
             # If item has a human-readable name, use it as the key
             key = item_name if item_name else item_id
-            description = item['fwprop'].get('entryDesc', '')
+            description = item['fwprop'].get('entryDesc', '').replace('\n',' ')
             is_do_nothing = (description.lower().strip() == 'do nothing')
             states[key] = {
                 'id': item_id,
@@ -87,7 +87,7 @@ def get_pr_desc(json_obj):
         conn_data = {
             'from': connection['stateFromID'],
             'to': connection['stateToID'],
-            'guardDesc': connection['fwprop'].get('guardDesc', ''),
+            'guardDesc': connection['fwprop'].get('guardDesc', '').replace('\n',' '),
             'order': int(connection['fwprop']['order']),
             'is_else_guard': is_else_guard
         }
