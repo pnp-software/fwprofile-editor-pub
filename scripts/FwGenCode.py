@@ -10,7 +10,7 @@ import json
 import sys
 
 from Utilities import createHeaderFile, createBodyFile, writeDoxy
-from FwDesc import get_pr_desc, states_by_id
+from FwDesc import get_pr_desc
 
 """ Prefix for file names for files implementing procedures """
 fn_pr_prefix = 'FwPr'
@@ -22,20 +22,33 @@ enum_pr_prefix = 'FwPr'
 fnc_pr_prefix = 'FwPr'
 
 
-def get_guard_fnc(pr_name, connection):
+def get_guard_fnc(pr_desc, connection):
     """ Return the name of the function implementing the guard on the connection """
+    pr_name = pr_desc['name']
+    states = pr_desc['states']
+    states_by_id = pr_desc['states_by_id']
     from_state = states_by_id[connection['from']]
     to_state = states_by_id[connection['to']]
+    assert(from_state['type'] in ('init', 'state', 'choice'))
+    assert(to_state['type'] in ('final', 'state', 'choice'))
     return fnc_pr_prefix+pr_name+from_state['name']+to_state['name']
     
     
-def get_node_name(pr_name, state):
-    """ Return the name of the enumerator holding the name of a node """
+def get_node_name(pr_desc, state):
+    """ Return the name of the enumerator holding the name of the node
+        represented by the argument state
+    """
+    assert(state['type'] in ('init', 'final', 'state'))
+    pr_name = pr_desc['name']
     return fnc_pr_prefix+pr_name+state['name']
 
     
-def get_node_fnc(pr_name, state):
-    """ Return the name of the function implementing the action of the state's node """
+def get_node_fnc(pr_desc, state):
+    """ Return the name of the function implementing the action of the node
+        represented by the argument state
+    """
+    assert(state['type'] in ('state'))
+    pr_name = pr_desc['name']
     return fnc_pr_prefix+pr_name+state['name']
 
 
@@ -113,8 +126,8 @@ def pr_create_user_header(pr_desc, dir_path):
     for connection in pr_desc['connections']:
         i = i+1
         if (connection['guardDesc'] != '') and not connection['is_else_guard']:
-            src_state_name = pr_desc['states_by_id'][connection['from']]
-            dest_state_name = pr_desc['states_by_id'][connection['to']]
+            src_state_name = pr_desc['states_by_id'][connection['from']]['name']
+            dest_state_name = pr_desc['states_by_id'][connection['to']]['name']
             connection_name = pr_name + src_state_name + 'To' + dest_state_name
             s += writeDoxy(['Function implementing the guard from '+src_state_name+\
                             ' to '+dest_state_name, connection['guardDesc']])
@@ -134,6 +147,7 @@ def pr_create_body(pr_desc, dir_path):
         name of the directory where the file is generated.
     """        
     pr_name = pr_desc['name']
+    states_by_id = pr_desc['states_by_id']
     
     s = '#include <'+pr_name+'.h>\n\n'
     s += writeDoxy(['The current procedure node'])
@@ -179,41 +193,43 @@ def pr_create_body(pr_desc, dir_path):
     s += '  prExecCnt++;\n'
     s += '  nodeExecCnt++;\n'
     s += '  while (1) {\n'
-    for state_name,state in pr_desc['states'].items():
-        assert(len(state['outgoing_connections']) == 1)
-        s += '    if (curNode == '+get_node_name(pr_name,state)+')\n' 
-        guard_fnc = get_guard_fnc(pr_name,state['outgoing_connections'][0])
+    for state_name, state in pr_desc['states'].items():
+        if len(state['outgoing_connections']) != 1:
+            continue
+        s += '\n    if (curNode == '+get_node_name(pr_desc,state)+')\n' 
+        guard_fnc = get_guard_fnc(pr_desc,state['outgoing_connections'][0])
         if guard_fnc != '':
             s += '      if ('+guard_fnc+'() == 0)\n'
             s += '        break;\n'
         next_node = states_by_id[state['outgoing_connections'][0]['to']]
         if next_node['name'] == 'Final':
-            s += '    curNode = '+enum_pr_prefix+prName+'Stopped;\n'
+            s += '    curNode = '+enum_pr_prefix+pr_name+'Stopped;\n'
             s += '    break;\n'
-        if len(next_node['outgoing_connections'] == 1):
-            s += '    curNode = ' + get_node_name(pr_name,next_node) + ';\n'
+        if len(next_node['outgoing_connections']) == 1:
+            s += '    curNode = ' + get_node_name(pr_desc,next_node) + ';\n'
             s += '    nodeExecCnt++;\n'
-            s += '   '+get_node_fnc+'();\n'
+            s += '   '+get_node_fnc(pr_desc, next_node)+'();\n'
         else:
             while (len(next_node['outgoing_connections']) > 1):
                 for connection in next_node['outgoing_connections']:
-                    guard_fnc = get_guard_fnc(pr_name,connection)
-                    next_node = connection['to']
+                    guard_fnc = get_guard_fnc(pr_desc, connection)
+                    next_node = states_by_id[connection['to']]
                     if len(next_node['outgoing_connections']) == 1:
                         if next_node['name'] == 'Final':
                             s += '    curNode = '+enum_pr_prefix+prName+'Stopped;\n'
                             s += '    return;\n'
                         else:
+                            next_node_fnc = get_node_fnc(pr_desc, next_node)
                             s += '      if ('+guard_fnc+'() == 1) {\n'
-                            s += '         curNode = '+get_node_name(pr_name,next_node)+';\n'
+                            s += '         curNode = '+get_node_name(pr_desc,next_node)+';\n'
                             s += '         nodeExecCnt++;\n'
-                            s += '        '+get_node_fnc+'();\n'
+                            s += '        '+next_node_fnc+'();\n'
                             s += '       }\n'
     s += '  }\n'    # While (1)    
     s += '}\n\n'    
     
     short_desc = 'Body file for module implementing procedure '+pr_name
-    createHeaderFile(dir_path, fn_pr_prefix+pr_name+'.c', s, short_desc)
+    createBodyFile(dir_path, fn_pr_prefix+pr_name, s, short_desc)
 
 
 def main(argv):

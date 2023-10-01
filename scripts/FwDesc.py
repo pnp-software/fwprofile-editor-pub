@@ -1,6 +1,6 @@
 """Functions to get the descriptor of a Procedure or State Machine from its json file
 
-The key functions in this module are: getFwPrDesc and getFwSmDesc. They take as
+The key functions in this module are: get_pr_desc and get_sm_desc. They take as
 argument the json file of a FW Profile Procedure or State Machine and return
 a dictionary holding a complete description of the procedue or state machine.
 """
@@ -11,8 +11,33 @@ import json
 
 def get_pr_desc(json_obj):
     """ 
-    Return a dictionary describing the procedure in the argument josn object
+    Return a dictionary describing the procedure in the argument json object
     If the json object does not contain a procedure, None is returned.
+    The procedure desriptor returned by this procedure holds:
+    - The procedure name
+    - The dictionary of procedure states indexed by their name
+    - The dictionary of procedure states indexed by their ID
+    - The list of connections in the procedures
+    - The list of notes in the procedure
+    
+    A procedure 'state' is one of: (a) the initial pseudo-state;
+    (b) the final pseudo-state, (c) an action node, or (d) a decision node.
+    The name of an action nodes or decision nodes is defined in the json model.
+    The name of the initial and final pseudo-nodes is set to: 'Initial' and
+    'Final'. 
+    
+    A procedure 'connection' is a connection between two procedure states. 
+    
+    Notes may be attached to procedure states. Each node dictionary holds a 
+    list of states to which the note is attached and each state dictionary
+    holds a list of notes to which it is attached.
+    
+    The 'is_do_nothing' attribute is attached to procedure states which 
+    represent an action node whose action consists of the (case-insensitive)
+    string 'do nothing'.
+    
+    The is_else_guard attribute is attached to connections whose guard is
+    equal to the (case-insensitive0 string 'else'.
     """    
     globals_data = json_obj['globals']['fwprop']
     if globals_data['editorType'] != 'Pr':
@@ -56,7 +81,7 @@ def get_pr_desc(json_obj):
             key = item_name if item_name else item_id
             description = item['fwprop'].get('entryDesc', '').replace('\n',' ')
             is_do_nothing = (description.lower().strip() == 'do nothing')
-            states[key] = {
+            state = {
                 'id': item_id,
                 'name': key,
                 'type': item_type,
@@ -69,7 +94,8 @@ def get_pr_desc(json_obj):
                 'outgoing_connections': [],  # List of outgoing connections
                 'to_notes': []  # List of notes attached to the state
             }
-            states_by_id[item_id] = key
+            states[key] = state
+            states_by_id[item_id] = state
     
     # Check if a notedot is attached to a state
     for notedot_id, notedot in notedots.items():

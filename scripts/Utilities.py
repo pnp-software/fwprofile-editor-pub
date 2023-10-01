@@ -84,9 +84,9 @@ def formatAsPartOfComment(text):
     return '\n'.join(lines)
     
 #===============================================================================
-# Create a body file with the given name and the given content.
 def createBodyFile(dirName, modelName, content, shortDesc):
-    name = dirName + '/' + fileName + '.c'
+    """Create a body file with the given name and the given content."""
+    name = dirName + '/' + modelName + '.c'
     ct = str(datetime.datetime.now())
     with open(name, 'w') as fd:
         fd.write('/**                                          \n')
@@ -102,8 +102,8 @@ def createBodyFile(dirName, modelName, content, shortDesc):
         fd.write(content)
 
 #===============================================================================
-# Create a header file for a procedure or state machine model.
 def createHeaderFile(dirName, modelName, content, modelDesc):
+    """ Create a header file for a procedure or state machine model. """
     name = dirName + '/' + modelName + '.h'
     ct = str(datetime.datetime.now())
     ifdefName = modelName.replace('_','').upper()
@@ -120,18 +120,5 @@ def createHeaderFile(dirName, modelName, content, modelDesc):
         fd.write('\n')
         fd.write(content)
         fd.write('#endif /* ' + ifdefName + '_H_ */\n')
-    
-#===============================================================================
-# Create a string representing the #define statement for constant (inclusive of 
-# its doxygen comment)
-def createVarDef(specItem):
-    assert specItem['cat'] == 'DataItem'
-    s = ''
-    if specItem['remarks'] != '':
-        writeDoxy(s, [specItem['desc'], specItem['remarks']])
-    else:
-        writeDoxy(s, [specItem['desc']])
-    s = s + '#define ' + specItem['name'] + '(' +  specItem['value']  + ')'
-    return s 
     
         
