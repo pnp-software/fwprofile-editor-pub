@@ -17,13 +17,14 @@ fn_pr_prefix = 'FwPr'
 """ Suffix for the header file name declaring the procedure user functions """
 uh_pr_suffix = 'User'
 """ Prefix for enumerator holding procedure nodes """
-enum_pr_prefix = 'FwPr'
+enum_pr_prefix = 'e'
 """ Prefix for function names for procedure files """
 fnc_pr_prefix = 'FwPr'
 
 
 def get_guard_fnc(pr_desc, connection):
-    """ Return the name of the function implementing the guard on the connection """
+    """ Return the name of the function implementing the guard on the connection
+        or None if the connection has no guard or the else guard """
     pr_name = pr_desc['name']
     states = pr_desc['states']
     states_by_id = pr_desc['states_by_id']
@@ -31,6 +32,8 @@ def get_guard_fnc(pr_desc, connection):
     to_state = states_by_id[connection['to']]
     assert(from_state['type'] in ('init', 'state', 'choice'))
     assert(to_state['type'] in ('final', 'state', 'choice'))
+    if connection['guardDesc'] == '' or connection['is_else_guard']:
+        return None
     return fnc_pr_prefix+pr_name+from_state['name']+to_state['name']
     
     
@@ -40,7 +43,7 @@ def get_node_name(pr_desc, state):
     """
     assert(state['type'] in ('init', 'final', 'state'))
     pr_name = pr_desc['name']
-    return fnc_pr_prefix+pr_name+state['name']
+    return enum_pr_prefix+pr_name+state['name']
 
     
 def get_node_fnc(pr_desc, state):
@@ -151,11 +154,11 @@ def pr_create_body(pr_desc, dir_path):
     
     s = '#include <'+pr_name+'.h>\n\n'
     s += writeDoxy(['The current procedure node'])
-    s += 'static '+enum_pr_prefix+pr_name+'Nodes_t curNode = FwPr'+pr_name+'Stopped;\n'
+    s += 'static '+enum_pr_prefix+pr_name+'Nodes_t curNode = FwPr'+pr_name+'Stopped;\n\n'
     s += writeDoxy(['The procedure execution counter'])
-    s += 'static unsigned int prExecCnt = 0;\n' 
+    s += 'static unsigned int prExecCnt = 0;\n\n' 
     s += writeDoxy(['The node execution counter'])
-    s += 'static unsigned int nodeExecCnt = 0;\n' 
+    s += 'static unsigned int nodeExecCnt = 0;\n\n' 
     
     s += 'unsigned int'+' '+fnc_pr_prefix+pr_name+'IsStarted() {\n'
     s += '  return curNode != '+enum_pr_prefix+pr_name+'Stopped;\n'
@@ -189,26 +192,29 @@ def pr_create_body(pr_desc, dir_path):
     
     s += 'void '+fnc_pr_prefix+pr_name+'Execute() {\n'
     s += '  if (curNode == '+enum_pr_prefix+pr_name+'Stopped)\n'
-    s += '      return;\n'
+    s += '      return;\n\n'
     s += '  prExecCnt++;\n'
     s += '  nodeExecCnt++;\n'
     s += '  while (1) {\n'
     for state_name, state in pr_desc['states'].items():
         if len(state['outgoing_connections']) != 1:
             continue
-        s += '\n    if (curNode == '+get_node_name(pr_desc,state)+')\n' 
+        s += '    if (curNode == '+get_node_name(pr_desc,state)+') {\n' 
         guard_fnc = get_guard_fnc(pr_desc,state['outgoing_connections'][0])
-        if guard_fnc != '':
+        if guard_fnc != None:
             s += '      if ('+guard_fnc+'() == 0)\n'
             s += '        break;\n'
         next_node = states_by_id[state['outgoing_connections'][0]['to']]
         if next_node['name'] == 'Final':
-            s += '    curNode = '+enum_pr_prefix+pr_name+'Stopped;\n'
-            s += '    break;\n'
+            s += '      curNode = '+enum_pr_prefix+pr_name+'Stopped;\n'
+            s += '      break;\n'
+            s += '    }\n\n'
         if len(next_node['outgoing_connections']) == 1:
-            s += '    curNode = ' + get_node_name(pr_desc,next_node) + ';\n'
-            s += '    nodeExecCnt++;\n'
-            s += '   '+get_node_fnc(pr_desc, next_node)+'();\n'
+            s += '      curNode = ' + get_node_name(pr_desc,next_node) + ';\n'
+            s += '      nodeExecCnt = 0;\n'
+            s += '      '+get_node_fnc(pr_desc, next_node)+'();\n'
+            s += '      continue;\n'
+            s += '    }\n\n'
         else:
             while (len(next_node['outgoing_connections']) > 1):
                 for connection in next_node['outgoing_connections']:
@@ -220,11 +226,20 @@ def pr_create_body(pr_desc, dir_path):
                             s += '    return;\n'
                         else:
                             next_node_fnc = get_node_fnc(pr_desc, next_node)
-                            s += '      if ('+guard_fnc+'() == 1) {\n'
-                            s += '         curNode = '+get_node_name(pr_desc,next_node)+';\n'
-                            s += '         nodeExecCnt++;\n'
-                            s += '        '+next_node_fnc+'();\n'
-                            s += '       }\n'
+                            if guard_fnc != None:
+                                s += '      if ('+guard_fnc+'() == 1) {\n'
+                                s += '         curNode = '+get_node_name(pr_desc,next_node)+';\n'
+                                s += '         nodeExecCnt = 0;\n'
+                                s += '         '+next_node_fnc+'();\n'
+                                s += '         continue;\n'
+                                s += '       }\n'
+                            else:
+                                s += '       curNode = '+get_node_name(pr_desc,next_node)+';\n'
+                                s += '       nodeExecCnt = 0;\n'
+                                s += '       continue;\n'
+                                s += '       '+next_node_fnc+'();\n'
+            s += '    }\n\n'
+                                
     s += '  }\n'    # While (1)    
     s += '}\n\n'    
     
