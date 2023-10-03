@@ -55,7 +55,7 @@ def get_pr_desc(json_obj):
         item_id = item['id']
         item_type = item['fwprop']['type']
         item_name = item['fwprop'].get('identifier', None)
-        if item_type in ('init', 'final'):  # final or final pseuod-node
+        if item_type in ('init', 'final'):  # initial or final pseuod-node
             item_name = item_type.capitalize()
         
         if item_type == "note":
@@ -77,8 +77,7 @@ def get_pr_desc(json_obj):
                 'y': item['attrs']['y']
             }
         else:   # The state is one of: IPN, FPN, Action Node, or Decision Node
-            # If item has a human-readable name, use it as the key
-            key = item_name if item_name else item_id
+            key = item_name.capitalize() if item_type == 'choice' else item_name
             description = item['fwprop'].get('entryDesc', '').replace('\n',' ')
             is_do_nothing = (description.lower().strip() == 'do nothing')
             state = {
@@ -109,11 +108,12 @@ def get_pr_desc(json_obj):
     # Extract connections
     connections = []
     for connection in json_obj.get('connections', []):
-        is_else_guard = (connection['fwprop']['guardCode'].lower().strip() == 'else')
+        guard_desc = connection['fwprop'].get('guardDesc', '').replace('\n',' ')
+        is_else_guard = (guard_desc.lower().strip() == 'else')
         conn_data = {
             'from': connection['stateFromID'],
             'to': connection['stateToID'],
-            'guardDesc': connection['fwprop'].get('guardDesc', '').replace('\n',' '),
+            'guardDesc': guard_desc,
             'order': int(connection['fwprop']['order']),
             'is_else_guard': is_else_guard
         }
