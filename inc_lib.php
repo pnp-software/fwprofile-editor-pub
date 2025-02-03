@@ -4,33 +4,6 @@
    setlocale(LC_ALL,"en_US");
    setlocale(LC_COLLATE,"C");
 
-   // -----------------------------------------------------------
-   // Disable magic quotes if server is configured to escape incoming data
-   // We disable it now and then escape everything ourselves instead
-   // -----------------------------------------------------------
-   //
-   if (get_magic_quotes_gpc())
-   {
-       $process = array(&$_GET, &$_POST, &$_COOKIE, &$_REQUEST);
-       while (list($key, $val) = each($process))
-       {
-           foreach ($val as $k => $v)
-           {
-               unset($process[$key][$k]);
-               if (is_array($v))
-               {
-                   $process[$key][stripslashes($k)] = $v;
-                   $process[] = &$process[$key][stripslashes($k)];
-               } else
-               {
-                   $process[$key][stripslashes($k)] = stripslashes($v);
-               }
-           }
-       }
-       unset($process,$v,$k,$val,$key);
-   }
-
-
    function sendDownloadHeaders($name)
    {
       header("Content-Type: application/x-unknown");
