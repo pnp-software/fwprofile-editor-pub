@@ -1,60 +1,88 @@
 <?php
-   require_once('inc_db.php');
-   require_once('inc_lib.php');
-   require_once('inc_session.php');
+require_once 'inc_db.php';
+require_once 'inc_lib.php';
+require_once 'inc_session.php';
 
-   if (userID()==0) return; // anonymous user can't save anything anywhere
+if (userID() == 0) {
+    return; // Anonymous users can't save anything.
+}
 
-   execQuery("UPDATE users SET idMap=\"".mysqli_escape($_POST['idMap'])."\" WHERE id=".userID());
-   if (trim($_POST['name'])=='') die(""); // empty name is sent only if we want to save idMap alone
+// Retrieve POST variables with defaults to avoid undefined index warnings.
+$idMap      = $_POST['idMap']      ?? '';
+$name       = $_POST['name']       ?? '';
+$viewbox    = $_POST['viewbox']    ?? '{}';
+$svg        = $_POST['svg']        ?? '';
+$asID       = $_POST['asID']       ?? '0';
+$fwprop     = $_POST['fwprop']     ?? '';
+$editorType = $_POST['editorType'] ?? '';
+$commit     = $_POST['commit']     ?? '';
 
-   $box=json_decode($_POST['viewbox'],true);
-   if ($box['width']==0) $box['width']=800;
-   if ($box['height']==0) $box['height']=400;
-   $svg=$_POST['svg'];
+// Update the user's idMap.
+execQuery("UPDATE users SET idMap=\"" . mysqli_escape($idMap) . "\" WHERE id=" . userID());
 
-   $existingID=$_POST['asID']+0;
-   if ($existingID!=0) $perm=access_rights($existingID);
+// If the trimmed name is empty, this indicates that only idMap is being saved.
+if (trim($name) == '') {
+    die("");
+}
 
-   // save diagram if user has access rights to write
-   if ($perm=='ow' || $perm=='rw' || $existingID==0)
-   {
-      $userID=userID(); // This gives us the current user which is taken in case we store for the first time.
+// Decode viewbox JSON. If decoding fails or is not an array, default dimensions are used.
+$box = json_decode($viewbox, true);
+if (!is_array($box)) {
+    $box = [];
+}
+$box['width']  = (isset($box['width']) && (int)$box['width'] !== 0)  ? (int)$box['width']  : 800;
+$box['height'] = (isset($box['height']) && (int)$box['height'] !== 0) ? (int)$box['height'] : 400;
 
-      if ($existingID > 0)
-      {
-         $row=mysqli_fetch_assoc(execQuery("SELECT * FROM diagrams WHERE id=".$existingID));
-         $userID = $row['userID']; // use owner of the diagram in case we have already stored it once.
-      }      
+$existingID = (int)$asID;
+$perm = '';
+if ($existingID !== 0) {
+    $perm = access_rights($existingID);
+}
 
-      execQuery("REPLACE INTO diagrams SET userID=".$userID.",
-            name=\"".mysqli_escape(trim($_POST['name']))."\",
+// Save diagram if the user has write permissions (or if it's a new diagram).
+if ($perm === 'ow' || $perm === 'rw' || $existingID === 0) {
+    $uid = userID(); // Current user ID.
+    
+    if ($existingID > 0) {
+        // If the diagram already exists, retrieve its record and use its owner.
+        $row = mysqli_fetch_assoc(execQuery("SELECT * FROM diagrams WHERE id=" . $existingID));
+        $uid = $row['userID'];
+    }
+
+    // Build the REPLACE query. Note the explicit (int) casts for numeric values.
+    $query = "REPLACE INTO diagrams SET userID=" . $uid . ",
+            name=\"" . mysqli_escape(trim($name)) . "\",
             lastUpdate=NOW(),
-            fwprop=\"".mysqli_escape($_POST['fwprop'])."\",
-            svg=\"".mysqli_escape($svg)."\",
-            width=".($box['width']+0).", height=".($box['height']+0).",
-            editorType=\"".preg_replace("{[^a-z ]}i","",$_POST['editorType'])."\"
-            ".($existingID>0?", id=".$existingID:"") );
+            fwprop=\"" . mysqli_escape($fwprop) . "\",
+            svg=\"" . mysqli_escape($svg) . "\",
+            width=" . ((int)$box['width']) . ", height=" . ((int)$box['height']) . ",
+            editorType=\"" . preg_replace("{[^a-z ]}i", "", $editorType) . "\""
+            . ($existingID > 0 ? ", id=" . $existingID : "");
+    execQuery($query);
 
-       // if new row was inserted, return its id
-       $current=insertId();
-       if ($current>0) $existingID=$current;
+    // If a new row was inserted, update $existingID.
+    $current = insertId();
+    if ($current > 0) {
+        $existingID = $current;
+    }
 
-      // remember old version in history
-      $commit = $_POST['commit'];
-      if ($commit == 'true')
-      {
-         $row=mysqli_fetch_assoc(execQuery("SELECT * FROM diagrams WHERE id=".$existingID));
-         $row['diagramID']=$row['id'];
-         $row['userID']=userID(); // mark current user as the one who saved this
-         $row['id']=0;
+    // If a commit is requested, save a history version.
+    if ($commit === 'true') {
+        $row = mysqli_fetch_assoc(execQuery("SELECT * FROM diagrams WHERE id=" . $existingID));
+        $row['diagramID'] = $row['id'];
+        $row['userID'] = userID(); // Mark the current user as the one who saved this.
+        $row['id'] = 0;
 
-         foreach($row as $key=>$val) $row[$key]="$key=\"".mysqli_escape($val)."\"";
-         execQuery("INSERT INTO history SET ".join(",",$row));
-      }
-   }
-   else die("-1"); // no rights to write
+        // Prepare each field for insertion into the history table.
+        foreach ($row as $key => $val) {
+            $row[$key] = "$key=\"" . mysqli_escape($val) . "\"";
+        }
+        execQuery("INSERT INTO history SET " . join(",", $row));
+    }
+} else {
+    die("-1"); // No rights to write.
+}
 
-   // print internal id of currently saved diagram
-   echo $existingID;
+// Output the internal ID of the saved diagram.
+echo $existingID;
 ?>
