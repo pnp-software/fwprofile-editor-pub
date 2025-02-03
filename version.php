@@ -1,7 +1,7 @@
 <?php
-   $version="5.29";
+   $version="6.0";
    $rev="?v".$version;
-    
+
     /* When client loads fw profile editor, his browser loads bunch of files
     (images, javascripts, etc) and caches them locally.
     Your server is configured to somehow force the browser to cache the
@@ -40,7 +40,9 @@
     If you remove or comment out this line, it will be somehow more
     optimal, but then you must ensure that if you change any file on the
     server, you always have to increment the version number a bit.   */
-   $rev="?".mt_rand(1,111111111);   // comment out on production
+   // $rev="?".mt_rand(1, 111111111);   // comment out on production
 
-   if ($_REQUEST['rev']=='1') $rev="";
+if (($_REQUEST['rev'] ?? null) === '1') {
+    $rev = "";
+}
 ?>
