@@ -42,7 +42,7 @@ if ($existingID !== 0) {
 // Save diagram if the user has write permissions (or if it's a new diagram).
 if ($perm === 'ow' || $perm === 'rw' || $existingID === 0) {
     $uid = userID(); // Current user ID.
-    
+
     if ($existingID > 0) {
         // If the diagram already exists, retrieve its record and use its owner.
         $row = mysqli_fetch_assoc(execQuery("SELECT * FROM diagrams WHERE id=" . $existingID));
@@ -69,6 +69,10 @@ if ($perm === 'ow' || $perm === 'rw' || $existingID === 0) {
     // If a commit is requested, save a history version.
     if ($commit === 'true') {
         $row = mysqli_fetch_assoc(execQuery("SELECT * FROM diagrams WHERE id=" . $existingID));
+        if ($row === null) {
+            // Handle the error as appropriate; for example:
+            die("Error: Diagram not found for commit.");
+        }
         $row['diagramID'] = $row['id'];
         $row['userID'] = userID(); // Mark the current user as the one who saved this.
         $row['id'] = 0;
